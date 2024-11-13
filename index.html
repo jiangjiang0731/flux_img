@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森林奇境 - AI图像生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #f4f8f2;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+                            url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=2048&q=80');
+            background-attachment: fixed;
+            background-size: cover;
+            color: #2c4a3d;
+            line-height: 1.6;
+        }
+
+        /* 导航栏样式 */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.6rem 2rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 2px solid rgba(168, 199, 181, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        nav:hover {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 4px 30px rgba(107, 144, 128, 0.15);
+        }
+
+        .logo {
+            font-family: "Palatino Linotype", serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c4a3d;
+            text-shadow: 2px 2px 4px rgba(107, 144, 128, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: translateY(-2px);
+        }
+
+        .logo::before {
+            content: '🌿';
+            font-size: 1.2rem;
+            animation: swing 3s ease-in-out infinite;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #6b9080;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-links a::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: #6b9080;
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::before {
+            width: 70%;
+        }
+
+        .nav-links a:hover {
+            background: rgba(107, 144, 128, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .nav-links a.active {
+            background: #6b9080;
+            color: white;
+            box-shadow: 0 4px 15px rgba(107, 144, 128, 0.3);
+        }
+
+        .nav-links a.active:hover {
+            background: #547c6b;
+        }
+
+        /* 添加导航栏动画 */
+        @keyframes swing {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        /* 添加滚动效果 */
+        .nav-scrolled {
+            padding: 0.4rem 2rem;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 4px 30px rgba(107, 144, 128, 0.15);
+        }
+
+        /* 主容器样式 */
+        .container {
+            max-width: 1400px;
+            margin: 100px auto 0;
+            padding: 2rem 3rem;
+        }
+
+        /* 提示词输入区域 */
+        .prompt-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 3rem;
+            border-radius: 15px;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid #a8c7b5;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #a8c7b5;
+            border-radius: 10px;
+            padding: 1rem;
+            color: #2c4a3d;
+            font-size: 1rem;
+            resize: none;
+            margin-bottom: 1rem;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #6b9080;
+        }
+
+        .generate-btn {
+            background: #6b9080;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .generate-btn:hover {
+            background: #547c6b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(107, 144, 128, 0.4);
+        }
+
+        /* 生成中区域 */
+        .generating-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            border: 2px solid #a8c7b5;
+        }
+
+        .loading {
+            color: #6b9080;
+            font-size: 1.2rem;
+        }
+
+        /* 图片展示区域 */
+        .gallery-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            border: 2px solid #a8c7b5;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #a8c7b5;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .image-info {
+            padding: 1rem;
+        }
+
+        /* 页脚样式 */
+        footer {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            border-top: 2px solid #a8c7b5;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            color: #2c4a3d;
+        }
+
+        h2 {
+            color: #2c4a3d;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 在style标签内添加FAQ相关样式 */
+        .faq-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            border: 2px solid #a8c7b5;
+        }
+
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            margin-bottom: 1rem;
+            border: 1px solid #a8c7b5;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 1rem;
+            background: rgba(107, 144, 128, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: rgba(107, 144, 128, 0.2);
+        }
+
+        .faq-question h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #2c4a3d;
+        }
+
+        .faq-toggle {
+            font-size: 1.5rem;
+            color: #6b9080;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-answer {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 1rem;
+            max-height: 1000px;
+        }
+
+        .faq-item.active .faq-toggle {
+            transform: rotate(45deg);
+        }
+
+        /* 添加平滑滚动效果 */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* 美化提示词输入区 */
+        .prompt-section {
+            animation: fadeIn 1s ease;
+        }
+
+        textarea {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        textarea:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(107, 144, 128, 0.15);
+        }
+
+        /* 美化生成按钮 */
+        .generate-btn {
+            min-width: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .generate-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .generate-btn:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* 美化图片卡片 */
+        .image-card {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .image-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(107, 144, 128, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .image-card:hover::before {
+            opacity: 1;
+        }
+
+        /* 添加动画关键帧 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* 美化加载动画 */
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+
+        /* 更新导航栏和容器相关样式 */
+
+        /* 添加欢迎区域样式 */
+        .hero-section {
+            flex: 1;
+            text-align: left;
+            padding: 3rem;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .hero-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            padding-top: 0;
+        }
+
+        .hero-section p {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        /* 调整提示词输入区样式 */
+        .prompt-section {
+            flex: 1;
+            padding: 3rem;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prompt-section h2 {
+            text-align: left;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+
+        /* 响应式布局 */
+        @media (max-width: 1200px) {
+            .top-sections-container {
+                flex-direction: column;
+            }
+            
+            .hero-section, .prompt-section {
+                width: 100%;
+            }
+        }
+
+        /* 添加新的布局容器 */
+        .top-sections-container {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 4rem;
+            align-items: stretch;
+        }
+
+        .hero-section, .prompt-section {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            border: 2px solid #a8c7b5;
+            padding: 3rem;
+            margin: 0;
+        }
+
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .prompt-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 移除原有的外边距和宽度限制 */
+        .prompt-section {
+            max-width: none;
+            margin: 0;
+        }
+
+        /* 调整导航栏高度 */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.6rem 2rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-container {
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #6b9080;
+            padding: 0.5rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .nav-links .login-btn {
+            border: 2px solid #6b9080;
+            margin-left: 0.5rem;
+        }
+
+        .nav-links .login-btn:hover {
+            background: #6b9080;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <div class="logo">森林奇境</div>
+            <div class="nav-links">
+                <a href="index.html" class="active">首页</a>
+                <a href="pricing.html">会员套餐</a>
+                <a href="#faq">常见问题</a>
+                <a href="login.html" class="login-btn">登录</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 将两个区域包装在 top-sections-container 中 -->
+        <div class="top-sections-container">
+            <!-- 欢迎区域 -->
+            <section class="hero-section">
+                <h1>AI驱动的自然艺术创作</h1>
+                <p>利用先进的人工智能技术，将你的创意转化为独特的自然艺术作品。探索无限可能，创造属于你的森林奇境。</p>
+            </section>
+
+            <!-- 提示词输入区 -->
+            <section class="prompt-section">
+                <h2>创造你的自然奇迹</h2>
+                <textarea placeholder="描述你想要创造的自然奇境..."></textarea>
+                <button class="generate-btn">开始创造</button>
+            </section>
+        </div>
+
+        <!-- 生成中区域 -->
+        <section class="generating-section">
+            <div class="loading">
+                正在为您描绘自然之美...
+            </div>
+        </section>
+
+        <!-- 图片展示区 -->
+        <section class="gallery-section">
+            <div class="image-card">
+                <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e" alt="森林景观">
+                <div class="image-info">
+                    <p>晨光中的森林</p>
+                    <small style="color: #6b9080;">2024-03-21</small>
+                </div>
+            </div>
+            <div class="image-card">
+                <img src="https://images.unsplash.com/photo-1473773508845-188df298d2d1" alt="溪流">
+                <div class="image-info">
+                    <p>清澈的山溪</p>
+                    <small style="color: #6b9080;">2024-03-21</small>
+                </div>
+            </div>
+            <div class="image-card">
+                <img src="https://images.unsplash.com/photo-1516214104703-d870798883c5" alt="花园">
+                <div class="image-info">
+                    <p>春日花园</p>
+                    <small style="color: #6b9080;">2024-03-21</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- 图片展示区域后面，footer前面添加FAQ部分 -->
+        <section class="faq-section">
+            <h2>常见问题</h2>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>如何建最好的图片描述？</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>尽可能详细描述你想要的场景，包括环境、光线、氛围等细节。例如："一片晨光中的森林，薄雾缭绕，阳光透过树叶洒在长满青苔的地面上"。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>生成的图片可以商用吗？</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>是的，所有通过我们平台生成的图片都可以免费商用。不过我们建议在使用时注明是AI生成的图片。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>生成图片需要多长时间？</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>通常一张图片的生成时间在15-30秒之间，具体取决于描述的复杂程度和服务器负载情况。</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>如何下载生成的图片？</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>点击图片下方的"下载"按钮即可将图片保存到您的设备中。所有图片都会以高清PNG格式保存。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-content">
+                <p>© 2024 森林奇境 | 探索自然之美</p>
+                <p style="color: #6b9080; margin-top: 0.5rem;">用AI描绘大自然的魅力</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 滚动效果
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+
+        // 设置当前活动页面的导航链接样式
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-links a');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath || 
+                    (currentPath === '/' && link.getAttribute('href') === '#')) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
